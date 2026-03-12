@@ -1,5 +1,6 @@
 var express = require('express');
 var router = express.Router();
+let roleModel = require('../schemas/roles');
 let userModel = require('../schemas/users');
 
 function sendSaveError(res, error) {
@@ -15,29 +16,48 @@ function sendSaveError(res, error) {
 }
 
 router.get('/', async function (req, res) {
-  let data = await userModel
-    .find({
-      isDeleted: false
-    })
-    .populate({
-      path: 'role',
-      select: 'name description'
-    });
+  let data = await roleModel.find({
+    isDeleted: false
+  });
   res.send(data);
 });
 
-router.get('/:id', async function (req, res) {
+router.get('/:id/users', async function (req, res) {
   try {
     let id = req.params.id;
-    let result = await userModel
-      .findOne({
+    let role = await roleModel.findOne({
+      isDeleted: false,
+      _id: id
+    });
+    if (!role) {
+      return res.status(404).send({
+        message: 'ID NOT FOUND'
+      });
+    }
+    let users = await userModel
+      .find({
         isDeleted: false,
-        _id: id
+        role: id
       })
       .populate({
         path: 'role',
         select: 'name description'
       });
+    res.send(users);
+  } catch (error) {
+    res.status(404).send({
+      message: error.message
+    });
+  }
+});
+
+router.get('/:id', async function (req, res) {
+  try {
+    let id = req.params.id;
+    let result = await roleModel.findOne({
+      isDeleted: false,
+      _id: id
+    });
     if (result) {
       res.send(result);
     } else {
@@ -54,24 +74,12 @@ router.get('/:id', async function (req, res) {
 
 router.post('/', async function (req, res) {
   try {
-    let newUser = new userModel({
-      username: req.body.username,
-      password: req.body.password,
-      email: req.body.email,
-      fullName: req.body.fullName,
-      avatarUrl: req.body.avatarUrl,
-      status: req.body.status,
-      role: req.body.role,
-      loginCount: req.body.loginCount
+    let newRole = new roleModel({
+      name: req.body.name,
+      description: req.body.description
     });
-    await newUser.save();
-
-    let result = await userModel.findById(newUser._id).populate({
-      path: 'role',
-      select: 'name description'
-    });
-
-    res.status(201).send(result);
+    await newRole.save();
+    res.status(201).send(newRole);
   } catch (error) {
     sendSaveError(res, error);
   }
@@ -80,7 +88,7 @@ router.post('/', async function (req, res) {
 router.put('/:id', async function (req, res) {
   try {
     let id = req.params.id;
-    let result = await userModel.findOneAndUpdate(
+    let result = await roleModel.findOneAndUpdate(
       {
         isDeleted: false,
         _id: id
@@ -96,10 +104,6 @@ router.put('/:id', async function (req, res) {
         message: 'ID NOT FOUND'
       });
     }
-    result = await userModel.findById(result._id).populate({
-      path: 'role',
-      select: 'name description'
-    });
     res.send(result);
   } catch (error) {
     sendSaveError(res, error);
@@ -109,7 +113,7 @@ router.put('/:id', async function (req, res) {
 router.delete('/:id', async function (req, res) {
   try {
     let id = req.params.id;
-    let result = await userModel.findOne({
+    let result = await roleModel.findOne({
       isDeleted: false,
       _id: id
     });

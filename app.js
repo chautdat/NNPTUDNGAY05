@@ -7,6 +7,8 @@ let mongoose = require('mongoose')
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
+var rolesRouter = require('./routes/roles');
+var statusRouter = require('./routes/status');
 
 var app = express();
 
@@ -22,6 +24,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+app.use('/roles', rolesRouter);
+app.use('/', statusRouter);
 app.use('/api/v1/products', require('./routes/products'))
 app.use('/api/v1/categories', require('./routes/categories'))
 
@@ -40,13 +44,14 @@ app.use(function (req, res, next) {
 
 // error handler
 app.use(function (err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+  let status = err.status || 500;
+  let payload = {
+    message: err.message
+  };
+  if (req.app.get('env') === 'development') {
+    payload.error = err;
+  }
+  res.status(status).send(payload);
 });
 
 module.exports = app;
